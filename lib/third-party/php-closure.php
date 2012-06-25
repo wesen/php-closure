@@ -306,13 +306,18 @@ class PhpClosure {
   }
 
   function _localCompile() {
-    $js_cmd = 'java -jar ' . LIB_DIR . 'third-party/compiler.jar';
+    $success = false;
+    $map = "";
+
+    $js_cmd = 'java -jar ' . dirname(__FILE__) . '/compiler.jar';
     $js_cmd .= ' --compilation_level ' . $this->_mode;
     $js_cmd .= ' --warning_level ' . $this->_warning_level;
+    $mapname = tempnam("/tmp/", "CLOSUREMAP");
+    $js_cmd .= " --create_source_map $mapname --source_map_format=V3";
     if ($this->_pretty_print)
       $js_cmd .= ' --formatting pretty_print';
 
-    $soy_cmd = 'java -jar ' . LIB_DIR . 'third-party/SoyToJsSrcCompiler.jar';
+    $soy_cmd = 'java -jar ' . dirname(__FILE__) . '/SoyToJsSrcCompiler.jar';
     $soy_js_filepath = $this->_cache_dir . 'soy.js';
     $soy_cmd .= " --outputPathFormat $soy_js_filepath";
     $soy_file_count = 0;
@@ -333,36 +338,48 @@ class PhpClosure {
     if ($soy_file_count > 0) {
       $this->_exec($soy_cmd, $stdout, $stderr);
       if (!strlen($stderr)) {
-        $js_cmd .= ' --js ' . LIB_DIR . 'third-party/soyutils.js';
+        $js_cmd .= ' --js ' . dirname(__FILE__) . '/soyutils.js';
         $js_cmd .= " --js $soy_js_filepath";
       }
       else {
         error_log($soy_cmd . "\n");
         error_log($stderr);
-        return $this->_debug ? false : 'window.console.error(\'Unexpected error\');';
+        $result = $this->_debug ? $stderr : 'window.console.error(\'Unexpected error\');';
+        goto end;
       }
     }
 
+    $stored_exc = null;
+
     // Run JS compiler.
     $this->_exec($js_cmd, $result, $stderr);
+
     if (strlen($stderr)) {
       foreach (explode("\n", $stderr) as $line) {
+        $debugresult = "";
         $line = addslashes(trim($line));
         if (strlen($line))
-          $result .= "\r\nwindow.console.error('$line');";
+          $debugresult .= "\r\nwindow.console.error('$line');";
       }
 
       error_log($js_cmd . "\n");
       error_log($stderr);
-      return $this->_debug ? false : 'window.console.error(\'Unexpected error\');';
+      $result = $this->_debug ? $stderr : $debugresult;
+      goto end;
     }
 
-    return $result;
+    $map = file_get_contents($mapname);
+    unlink($mapname);
+
+    $success = true;
+    end:
+    return array($success, $result, $map);
   }
 
   function _compile() {
     if ($this->_local_compile) {
-      return $this->_localCompile();
+      list ($success, $result, $map) = $this->_localCompile();
+      return $result;
     }
 
     // Quieten strict notices.
