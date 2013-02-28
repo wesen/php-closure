@@ -309,18 +309,25 @@ class PhpClosure {
     $success = false;
     $map = "";
 
+    $this->simpleMode();
     $js_cmd = 'java -jar ' . dirname(__FILE__) . '/compiler.jar';
     $js_cmd .= ' --compilation_level ' . $this->_mode;
-    $js_cmd .= ' --warning_level ' . $this->_warning_level;
+//    $js_cmd .= ' --warning_level ' . $this->_warning_level;
+    $js_cmd .= ' --warning_level QUIET';
+    $js_cmd .= ' --third_party --process_jquery_primitives';
+//    $js_cmd .= ' --js_output_file /tmp/foo3.js';
     $mapname = tempnam("/tmp/", "CLOSUREMAP");
     $js_cmd .= " --create_source_map $mapname --source_map_format=V3";
-    if ($this->_pretty_print)
-      $js_cmd .= ' --formatting pretty_print';
+//    $js_cmd .= " --externs /tmp/jquery-1.7.js";
+//    if ($this->_pretty_print)
+//      $js_cmd .= ' --formatting pretty_print';
 
     $soy_cmd = 'java -jar ' . dirname(__FILE__) . '/SoyToJsSrcCompiler.jar';
     $soy_js_filepath = $this->_cache_dir . 'soy.js';
     $soy_cmd .= " --outputPathFormat $soy_js_filepath";
     $soy_file_count = 0;
+
+    // $js_cmd = "yuicompressor ";
 
     foreach ($this->_srcs as $src) {
       // Determine if this is soy or js by file extension.
