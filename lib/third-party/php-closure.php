@@ -312,7 +312,7 @@ class PhpClosure {
     $js_cmd .= ' --compilation_level ' . $this->_mode;
 //    $js_cmd .= ' --warning_level ' . $this->_warning_level;
     $js_cmd .= ' --warning_level QUIET';
-    $js_cmd .= ' --third_party --process_jquery_primitives';
+    $js_cmd .= ' --third_party';
 //    $js_cmd .= ' --js_output_file /tmp/foo3.js';
     $mapname = tempnam("/tmp/", "CLOSUREMAP");
     $js_cmd .= " --create_source_map $mapname --source_map_format=V3";
